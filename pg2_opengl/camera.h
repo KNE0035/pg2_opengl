@@ -37,7 +37,7 @@ public:
 	Matrix4x4 projectionMatrix;
 
 	float nearProjection = 1.0;
-	float farProjection = 50.0;
+	float farProjection = 1000.0;
 
 private:
 	float fov_y_{ 0.785f }; // vertical field of view (rad)

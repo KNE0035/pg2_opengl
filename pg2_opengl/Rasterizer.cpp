@@ -36,7 +36,7 @@ int Rasterizer::InitDevice() {
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 8);
 	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
@@ -98,14 +98,17 @@ int Rasterizer::InitDevice() {
 	// TODO check linking
 	glUseProgram(shader_program);
 
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
 	return S_OK;
 }
 
 int Rasterizer::initBuffers() {
 	const int no_vertices = no_triangles * 3;
-	vertices = new GLfloat[no_vertices * 3];
+	Vertex* vertices = new Vertex[no_vertices];
 
-	const int vertex_stride = sizeof(vertices) / no_vertices;
+	const int vertex_stride = sizeof(Vertex);
 
 	int k = 0;
 	for (auto surface : surfaces_)
@@ -117,12 +120,7 @@ int Rasterizer::initBuffers() {
 			// vertices loop
 			for (int j = 0; j < 3; ++j, ++k)
 			{
-				const Vertex & vertex = triangle.vertex(j);
-
-				vertices[3 * k] = vertex.position.x;
-				vertices[3 * k + 1] = vertex.position.y;
-				vertices[3 * k + 2] = vertex.position.z;
-
+				vertices[k] = triangle.vertex(j);
 			} // end of vertices loop
 
 		} // end of triangles loop
@@ -130,15 +128,22 @@ int Rasterizer::initBuffers() {
 	} // end of surfaces loop
 	
 	glGenVertexArrays(1, &vao);
-	//glBindVertexArray(vao);
+	glBindVertexArray(vao);
 
 	glGenBuffers(1, &vbo); // generate vertex buffer object (one of OpenGL objects) and get the unique ID corresponding to that buffer
 	glBindBuffer(GL_ARRAY_BUFFER, vbo); // bind the newly created buffer to the GL_ARRAY_BUFFER target
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // copies the previously defined vertex data into the buffer's memory
+	glBufferData(GL_ARRAY_BUFFER, no_vertices * sizeof(Vertex), vertices, GL_STATIC_DRAW); // copies the previously defined vertex data into the buffer's memory
 																			   // vertex position
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertex_stride, 0);
 	glEnableVertexAttribArray(0);
 
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertex_stride, (void*) (3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	/*glPointSize(10.0f);
+	glLineWidth(2.0f);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
+	delete[] vertices;
 	return S_OK;
 }
 
@@ -146,9 +151,8 @@ int Rasterizer::realeaseDevice() {
 	glDeleteShader(vertex_shader);
 	glDeleteShader(fragment_shader);
 	glDeleteProgram(shader_program);
-
-	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &vbo);
 
 	glfwTerminate();
 	return S_OK;
@@ -156,13 +160,11 @@ int Rasterizer::realeaseDevice() {
 
 
 int Rasterizer::RenderFrame() {
-	
+	glBindVertexArray(vao);
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state setting function
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // state using function
-
-		glBindVertexArray(vao);
 
 		Matrix4x4 model;
 		model.set(0, 0, 1);
@@ -171,12 +173,16 @@ int Rasterizer::RenderFrame() {
 		model.set(3, 3, 1);
 
 		Matrix4x4 mvp = camera.projectionMatrix * camera.viewMatrix * model;
+		model.EuclideanInverse();
+		model.Transpose();
+		Matrix4x4 mvn = camera.viewMatrix * model;
 
 		SetMatrix4x4(shader_program, mvp.data(), "mvp");
+		SetMatrix4x4(shader_program, mvn.data(), "mvn");
 
 		//glDrawArrays( GL_TRIANGLES, 0, vertices / );
 		//glDrawArrays( GL_POINTS, 0, 3 );
-		glDrawArrays(GL_TRIANGLES, 0, no_triangles);
+		glDrawArrays(GL_TRIANGLES, 0, no_triangles * 3);
 		//glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0); // optional - render from an index buffer
 
 		glfwSwapBuffers(window);

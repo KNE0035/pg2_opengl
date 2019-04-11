@@ -33,7 +33,6 @@ private:
 
 
 	Camera camera;
-	GLfloat* vertices;
 	std::vector<Surface *> surfaces_;
 	std::vector<Material *> materials_;
 };

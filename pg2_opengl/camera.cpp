@@ -55,6 +55,7 @@ void Camera::Update()
 	float heightHalf = nearProjection * tanf(fov_y_ * 0.5);
 	float widthHalf = heightHalf * aspectRatio;
 	viewMatrix = Matrix4x4(x_c, y_c, z_c, view_from_);
+	viewMatrix.EuclideanInverse();
 
 	float f = 1.0f;
 	float farNearFraction = (farProjection + nearProjection) / (nearProjection - farProjection);
