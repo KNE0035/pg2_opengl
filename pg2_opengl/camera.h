@@ -3,6 +3,7 @@
 
 #include "vector3.h"
 #include "matrix3x3.h"
+#include "matrix4x4.h"
 
 /*! \class Camera
 \brief A simple pin-hole camera.
@@ -32,6 +33,12 @@ public:
 	int width_{ 640 }; // image width (px)
 	int height_{ 480 };  // image height (px)
 
+	Matrix4x4 viewMatrix;
+	Matrix4x4 projectionMatrix;
+
+	float nearProjection = 1.0;
+	float farProjection = 50.0;
+
 private:
 	float fov_y_{ 0.785f }; // vertical field of view (rad)
 	
@@ -41,7 +48,7 @@ private:
 
 	float f_y_{ 1.0f }; // focal lenght (px)
 
-	Matrix3x3 M_c_w_; // transformation matrix from CS -> WS	
+	Matrix3x3 M_c_w_; // transformation matrix from CS -> WS
 };
 
 #endif

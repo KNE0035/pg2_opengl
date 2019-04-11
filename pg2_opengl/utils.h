@@ -113,4 +113,12 @@ char * LoadShader(const char * file_name);
 /* check shader for completeness */
 GLint CheckShader(const GLenum shader);
 
+template<typename T> inline void swap(T & a, T & b)
+{
+	const T tmp = a;
+	a = b;
+	b = tmp;
+}
+
+
 #endif

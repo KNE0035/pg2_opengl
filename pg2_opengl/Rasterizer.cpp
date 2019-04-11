@@ -2,6 +2,8 @@
 #include "Rasterizer.h"
 #include "objloader.h"
 #include "utils.h"
+#include "matrix4x4.h"
+#include "glutils.h"
 
 Rasterizer::Rasterizer(const int width, const int height, const float fov_y, const Vector3 view_from, const Vector3 view_at)
 {
@@ -15,14 +17,14 @@ Rasterizer::~Rasterizer()
 
 void Rasterizer::loadScene(const std::string file_name) {
 	const int no_surfaces = LoadOBJ("../../data/6887_allied_avenger_gi.obj", surfaces_, materials_);
-	int no_triangles = 0;
+	no_triangles = 0;
 
 	for (auto surface : surfaces_)
 	{
 		no_triangles += surface->no_triangles();
 	}
 
-	this->initBuffers(no_triangles);
+	this->initBuffers();
 }
 
 int Rasterizer::InitDevice() {
@@ -73,7 +75,7 @@ int Rasterizer::InitDevice() {
 	// map from the range of NDC coordinates <-1.0, 1.0>^2 to <0, width> x <0, height>
 	glViewport(0, 0, camera.width_, camera.height_);
 	// GL_LOWER_LEFT (OpenGL) or GL_UPPER_LEFT (DirectX, Windows) and GL_NEGATIVE_ONE_TO_ONE or GL_ZERO_TO_ONE
-	glClipControl(GL_UPPER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+	glClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
 	
 	GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
 	const char * vertex_shader_source = LoadShader("basic_shader.vert");
@@ -89,7 +91,7 @@ int Rasterizer::InitDevice() {
 	SAFE_DELETE_ARRAY(fragment_shader_source);
 	CheckShader(fragment_shader);
 
-	GLuint shader_program = glCreateProgram();
+	shader_program = glCreateProgram();
 	glAttachShader(shader_program, vertex_shader);
 	glAttachShader(shader_program, fragment_shader);
 	glLinkProgram(shader_program);
@@ -99,7 +101,7 @@ int Rasterizer::InitDevice() {
 	return S_OK;
 }
 
-int Rasterizer::initBuffers(int no_triangles) {
+int Rasterizer::initBuffers() {
 	const int no_vertices = no_triangles * 3;
 	vertices = new GLfloat[no_vertices * 3];
 
@@ -128,7 +130,7 @@ int Rasterizer::initBuffers(int no_triangles) {
 	} // end of surfaces loop
 	
 	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	//glBindVertexArray(vao);
 
 	glGenBuffers(1, &vbo); // generate vertex buffer object (one of OpenGL objects) and get the unique ID corresponding to that buffer
 	glBindBuffer(GL_ARRAY_BUFFER, vbo); // bind the newly created buffer to the GL_ARRAY_BUFFER target
@@ -161,9 +163,20 @@ int Rasterizer::RenderFrame() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // state using function
 
 		glBindVertexArray(vao);
-		glDrawArrays( GL_TRIANGLES, 0, 3 );
+
+		Matrix4x4 model;
+		model.set(0, 0, 1);
+		model.set(1, 1, 1);
+		model.set(2, 2, 1);
+		model.set(3, 3, 1);
+
+		Matrix4x4 mvp = camera.projectionMatrix * camera.viewMatrix * model;
+
+		SetMatrix4x4(shader_program, mvp.data(), "mvp");
+
+		//glDrawArrays( GL_TRIANGLES, 0, vertices / );
 		//glDrawArrays( GL_POINTS, 0, 3 );
-		//glDrawArrays( GL_LINE_LOOP, 0, 3 );
+		glDrawArrays(GL_TRIANGLES, 0, no_triangles);
 		//glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0); // optional - render from an index buffer
 
 		glfwSwapBuffers(window);

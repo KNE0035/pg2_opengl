@@ -158,8 +158,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
+    <ClInclude Include="glutils.h" />
     <ClInclude Include="material.h" />
     <ClInclude Include="matrix3x3.h" />
+    <ClInclude Include="matrix4x4.h" />
     <ClInclude Include="mymath.h" />
     <ClInclude Include="objloader.h" />
     <ClInclude Include="pch.h" />
@@ -176,8 +178,10 @@
   <ItemGroup>
     <ClCompile Include="..\..\libs\glad\src\glad.cpp" />
     <ClCompile Include="camera.cpp" />
+    <ClCompile Include="glutils.cpp" />
     <ClCompile Include="material.cpp" />
     <ClCompile Include="matrix3x3.cpp" />
+    <ClCompile Include="matrix4x4.cpp" />
     <ClCompile Include="mymath.cpp" />
     <ClCompile Include="objloader.cpp" />
     <ClCompile Include="pch.cpp">

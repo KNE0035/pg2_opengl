@@ -18,7 +18,7 @@ public:
 
 	void loadScene(const std::string file_name);
 
-	int initBuffers(int no_triangles);
+	int initBuffers();
 
 	int RenderFrame();
 
@@ -29,6 +29,8 @@ private:
 	GLuint vao { 0 };
 	GLuint vbo{ 0 };
 	GLFWwindow* window;
+	int no_triangles;
+
 
 	Camera camera;
 	GLfloat* vertices;

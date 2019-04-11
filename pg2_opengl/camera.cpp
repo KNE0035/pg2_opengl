@@ -50,6 +50,21 @@ void Camera::Update()
 	x_c.Normalize();
 	Vector3 y_c = z_c.CrossProduct( x_c );
 	y_c.Normalize();
+	
+	float aspectRatio = width_ / float(height_);
+	float heightHalf = nearProjection * tanf(fov_y_ * 0.5);
+	float widthHalf = heightHalf * aspectRatio;
+	viewMatrix = Matrix4x4(x_c, y_c, z_c, view_from_);
+
+	float f = 1.0f;
+	float farNearFraction = (farProjection + nearProjection) / (nearProjection - farProjection);
+
+	projectionMatrix.set(0, 0, nearProjection / widthHalf);
+	projectionMatrix.set(1, 1, f * nearProjection / heightHalf);
+	projectionMatrix.set(2, 2, farNearFraction);
+	projectionMatrix.set(2, 3, 2 * farNearFraction);
+	projectionMatrix.set(3, 2, -1);
+
 	M_c_w_ = Matrix3x3( x_c, y_c, z_c );
 }
 
