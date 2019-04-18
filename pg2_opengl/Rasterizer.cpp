@@ -163,7 +163,7 @@ int Rasterizer::RenderFrame() {
 	glBindVertexArray(vao);
 	while (!glfwWindowShouldClose(window))
 	{
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state setting function
+		//glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state setting function
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // state using function
 
 		Matrix4x4 model;
@@ -175,10 +175,10 @@ int Rasterizer::RenderFrame() {
 		Matrix4x4 mvp = camera.projectionMatrix * camera.viewMatrix * model;
 		model.EuclideanInverse();
 		model.Transpose();
-		Matrix4x4 mvn = camera.viewMatrix * model;
+		Matrix4x4 mvn = model;
 
-		SetMatrix4x4(shader_program, mvp.data(), "mvp");
-		SetMatrix4x4(shader_program, mvn.data(), "mvn");
+		SetMatrix4x4(shader_program, mvp.data(), "MVP");
+		SetMatrix4x4(shader_program, mvn.data(), "MVN");
 
 		//glDrawArrays( GL_TRIANGLES, 0, vertices / );
 		//glDrawArrays( GL_POINTS, 0, 3 );
