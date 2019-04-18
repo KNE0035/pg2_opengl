@@ -131,6 +131,10 @@ Color3f Texture::texel( const float u, const float v, const bool linearize ) con
 	}
 }
 
+BYTE * Texture::data() const {
+	return data_;
+}
+
 int Texture::width() const
 {
 	return width_;

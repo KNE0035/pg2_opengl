@@ -17,7 +17,7 @@ public:
 	int realeaseDevice();
 
 	void loadScene(const std::string file_name);
-
+	void initMaterials();
 	int initBuffers();
 
 	int RenderFrame();

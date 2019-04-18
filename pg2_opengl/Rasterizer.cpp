@@ -15,6 +15,45 @@ Rasterizer::~Rasterizer()
 {
 }
 
+
+void Rasterizer::initMaterials() {
+	#pragma pack( push, 1 ) // 1 B alignment
+	struct GLMaterial
+	{
+		Color3f diffuse; // 3 * 4B
+		GLbyte pad0[4]; // + 4 B = 16 B
+		GLuint64 tex_diffuse_handle{ 0 }; // 1 * 8 B
+		GLbyte pad1[8]; // + 8 B = 16 B
+	};
+	#pragma pack( pop )
+
+	GLMaterial * gl_materials = new GLMaterial[materials_.size()];
+	int m = 0;
+	for (const auto & material : materials_) {
+		Texture * tex_diffuse = material->texture(Material::kDiffuseMapSlot);
+		if (tex_diffuse) {
+			GLuint id = 0;
+			CreateBindlessTexture(id, gl_materials[m].tex_diffuse_handle, tex_diffuse->width(), tex_diffuse->height(), tex_diffuse->data());
+			gl_materials[m].diffuse = Color3f{ 1.0f, 1.0f, 1.0f }; // white diffuse color
+		}
+		else {
+			GLuint id = 0;
+			GLubyte data[] = { 255, 255, 255, 255 }; // opaque white
+			CreateBindlessTexture(id, gl_materials[m].tex_diffuse_handle, 1, 1, data); // white texture
+			gl_materials[m].diffuse = material->diffuse();
+		}
+		m++;
+	}
+	GLuint ssbo_materials = 0;
+	glGenBuffers(1, &ssbo_materials);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_materials);
+	const GLsizeiptr gl_materials_size = sizeof(GLMaterial) * materials_.size();
+	glBufferData(GL_SHADER_STORAGE_BUFFER, gl_materials_size, gl_materials, GL_STATIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_materials);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	SAFE_DELETE_ARRAY(gl_materials);
+}
+
 void Rasterizer::loadScene(const std::string file_name) {
 	const int no_surfaces = LoadOBJ("../../data/6887_allied_avenger_gi.obj", surfaces_, materials_);
 	no_triangles = 0;
@@ -36,7 +75,7 @@ int Rasterizer::InitDevice() {
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 8);
 	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
@@ -140,6 +179,18 @@ int Rasterizer::initBuffers() {
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertex_stride, (void*) (3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, vertex_stride, (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, vertex_stride, (void*)(9 * sizeof(float)));
+	glEnableVertexAttribArray(3);
+
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, vertex_stride, (void*)(11 * sizeof(float)));
+	glEnableVertexAttribArray(4);
+
+	glVertexAttribIPointer(5, 1, GL_INT, vertex_stride, (void*) (14 * sizeof(float)));
+	glEnableVertexAttribArray(5);
+
 	/*glPointSize(10.0f);
 	glLineWidth(2.0f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
@@ -173,9 +224,7 @@ int Rasterizer::RenderFrame() {
 		model.set(3, 3, 1);
 
 		Matrix4x4 mvp = camera.projectionMatrix * camera.viewMatrix * model;
-		model.EuclideanInverse();
-		model.Transpose();
-		Matrix4x4 mvn = model;
+		Matrix4x4 mvn = model *camera.viewMatrix;
 
 		SetMatrix4x4(shader_program, mvp.data(), "MVP");
 		SetMatrix4x4(shader_program, mvn.data(), "MVN");
