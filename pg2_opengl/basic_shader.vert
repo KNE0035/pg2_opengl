@@ -7,15 +7,18 @@ layout ( location = 4 ) in vec3 in_tangent;layout ( location = 5 ) in int in_ma
 
 uniform mat4 MVP;
 uniform mat4 MVN;
+uniform vec3 lightPossition;
 
 out vec3 unified_normal;
 out vec2 texcoord;
+out float normalLightDot;
 flat out int material_index;
 
 void main( void )
 {
 	gl_Position =  MVP * vec4(in_position_ms.x, in_position_ms.y, in_position_ms.z , 1.0f);
-	
+
+
 	unified_normal = normalize((MVN * vec4(in_normal_ms.x, in_normal_ms.y, in_normal_ms.z, 0.0f)).xyz);
 	vec4 hit_es = MVN * vec4(in_position_ms.x, in_position_ms.y, in_position_ms.z , 1.0f);
 	
@@ -27,4 +30,9 @@ void main( void )
 	
 	texcoord = vec2( in_texcoord.x, 1.0f - in_texcoord.y ); // 3ds max fix
 	material_index = in_material_index;
+
+	vec3 vectorToLight_MS = normalize(lightPossition - in_position_ms.xyz);
+	vec3 vectorToLight_ES = normalize((MVN * vec4(vectorToLight_MS.x, vectorToLight_MS.y, vectorToLight_MS.z, 0.0f)).xyz);
+
+	normalLightDot = dot(unified_normal, vectorToLight_ES.xyz);
 }

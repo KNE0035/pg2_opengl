@@ -122,7 +122,7 @@ int LoadMTL(const char * file_name, const char * path, std::vector<Material *> &
 				//printf( "material name=%s\n", material_name );				
 
 				material = new Material();
-				//material->materialIndex = nextMaterialIndex;
+				material->materialIndex = nextMaterialIndex;
 				nextMaterialIndex++;
 			}
 			else

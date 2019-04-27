@@ -16,16 +16,17 @@ Rasterizer::~Rasterizer()
 }
 
 
+#pragma pack( push, 1 ) // 1 B alignment
+struct GLMaterial
+{
+	Color3f diffuse; // 3 * 4B
+	GLbyte pad0[4]; // + 4 B = 16 B
+	GLuint64 tex_diffuse_handle{ 0 }; // 1 * 8 B
+	GLbyte pad1[8]; // + 8 B = 16 B
+};
+#pragma pack( pop )
+
 void Rasterizer::initMaterials() {
-	#pragma pack( push, 1 ) // 1 B alignment
-	struct GLMaterial
-	{
-		Color3f diffuse; // 3 * 4B
-		GLbyte pad0[4]; // + 4 B = 16 B
-		GLuint64 tex_diffuse_handle{ 0 }; // 1 * 8 B
-		GLbyte pad1[8]; // + 8 B = 16 B
-	};
-	#pragma pack( pop )
 
 	GLMaterial * gl_materials = new GLMaterial[materials_.size()];
 	int m = 0;
@@ -128,6 +129,7 @@ int Rasterizer::InitDevice() {
 	glShaderSource(fragment_shader, 1, &fragment_shader_source, nullptr);
 	glCompileShader(fragment_shader);
 	SAFE_DELETE_ARRAY(fragment_shader_source);
+
 	CheckShader(fragment_shader);
 
 	shader_program = glCreateProgram();
@@ -160,6 +162,7 @@ int Rasterizer::initBuffers() {
 			for (int j = 0; j < 3; ++j, ++k)
 			{
 				vertices[k] = triangle.vertex(j);
+				vertices[k].materialIndex = surface->get_material()->materialIndex;
 			} // end of vertices loop
 
 		} // end of triangles loop
@@ -214,6 +217,7 @@ int Rasterizer::RenderFrame() {
 	glBindVertexArray(vao);
 	while (!glfwWindowShouldClose(window))
 	{
+		Vector3 lightPoss = Vector3(50, 0, 120);
 		//glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state setting function
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // state using function
 
@@ -228,6 +232,12 @@ int Rasterizer::RenderFrame() {
 
 		SetMatrix4x4(shader_program, mvp.data(), "MVP");
 		SetMatrix4x4(shader_program, mvn.data(), "MVN");
+		
+		const GLint possLocation = glGetUniformLocation(shader_program, "lightPossition");
+
+
+		glUniform3f(possLocation ,lightPoss.x, lightPoss.y, lightPoss.z);
+
 
 		//glDrawArrays( GL_TRIANGLES, 0, vertices / );
 		//glDrawArrays( GL_POINTS, 0, 3 );
