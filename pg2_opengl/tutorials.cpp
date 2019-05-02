@@ -10,6 +10,7 @@ int tutorial_1( const int width, const int height)
 {
 	Rasterizer rasterizer(640, 480, deg2rad(45.0), Vector3(175, -140, 130), Vector3(0, 0, 35));
 	rasterizer.InitDevice();
+	//rasterizer.initFrameBuffer();
 	rasterizer.loadScene("../../../data/6887_allied_avenger_gi.obj");
 	rasterizer.initMaterials();
 	rasterizer.RenderFrame();

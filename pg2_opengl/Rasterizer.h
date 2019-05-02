@@ -18,6 +18,7 @@ public:
 
 	void loadScene(const std::string file_name);
 	void initMaterials();
+	int initFrameBuffer();
 	int initBuffers();
 
 	int RenderFrame();
@@ -26,8 +27,12 @@ private:
 	GLuint fragment_shader { 0 };
 	GLuint shader_program{ 0 };
 	GLuint vertex_shader { 0 };
+	GLuint ssbo_materials{ 0 };
 	GLuint vao { 0 };
 	GLuint vbo{ 0 };
+	GLuint fbo{ 0 };
+	GLuint rboColor;
+	GLuint rboDepth;
 	GLFWwindow* window;
 	int no_triangles;
 

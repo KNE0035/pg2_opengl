@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Rasterizer.h"
 #include "objloader.h"
 #include "utils.h"
@@ -20,9 +20,13 @@ Rasterizer::~Rasterizer()
 struct GLMaterial
 {
 	Color3f diffuse; // 3 * 4B
-	GLbyte pad0[4]; // + 4 B = 16 B
+	GLbyte pad0[4];
+	Color3f specular;
+	GLbyte pad1[4];
+	Color3f ambient;
+	GLbyte pad2[4];
 	GLuint64 tex_diffuse_handle{ 0 }; // 1 * 8 B
-	GLbyte pad1[8]; // + 8 B = 16 B
+	GLbyte pad3[8];
 };
 #pragma pack( pop )
 
@@ -42,10 +46,12 @@ void Rasterizer::initMaterials() {
 			GLubyte data[] = { 255, 255, 255, 255 }; // opaque white
 			CreateBindlessTexture(id, gl_materials[m].tex_diffuse_handle, 1, 1, data); // white texture
 			gl_materials[m].diffuse = material->diffuse();
-		}
+		}		
+		gl_materials[m].specular = material->specular(); // white specular color
+		gl_materials[m].ambient = material->ambient(); // white ambient color
 		m++;
 	}
-	GLuint ssbo_materials = 0;
+	ssbo_materials = 0;
 	glGenBuffers(1, &ssbo_materials);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_materials);
 	const GLsizeiptr gl_materials_size = sizeof(GLMaterial) * materials_.size();
@@ -53,6 +59,22 @@ void Rasterizer::initMaterials() {
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_materials);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	SAFE_DELETE_ARRAY(gl_materials);
+}
+
+int Rasterizer::initFrameBuffer() {
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	// Color renderbuffer.
+	glGenRenderbuffers(1, &rboColor);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboColor);
+	glRenderbufferStorage(GL_RENDERBUFFER, /*GL_RGBA8*/GL_RGBA32F, camera.width_ , camera.height_);
+	// Depth renderbuffer
+	glGenRenderbuffers(1, &rboDepth);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, camera.width_, camera.height_);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboColor);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return -1;
 }
 
 void Rasterizer::loadScene(const std::string file_name) {
@@ -215,6 +237,7 @@ int Rasterizer::realeaseDevice() {
 
 int Rasterizer::RenderFrame() {
 	glBindVertexArray(vao);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	while (!glfwWindowShouldClose(window))
 	{
 		Vector3 lightPoss = Vector3(50, 0, 120);
