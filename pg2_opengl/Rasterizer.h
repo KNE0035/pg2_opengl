@@ -24,15 +24,19 @@ public:
 	int RenderFrame();
 
 private:
-	GLuint fragment_shader { 0 };
+	GLuint fragment_shader{ 0 };
 	GLuint shader_program{ 0 };
-	GLuint vertex_shader { 0 };
+	GLuint vertex_shader{ 0 };
 	GLuint ssbo_materials{ 0 };
-	GLuint vao { 0 };
+	GLuint vao{ 0 };
 	GLuint vbo{ 0 };
 	GLuint fbo{ 0 };
-	GLuint rboColor;
-	GLuint rboDepth;
+	GLuint fboDownsample{ 0 };
+	GLuint rboColor { 0 };
+	GLuint rboPosition { 0 };
+	GLuint rboDownsampleColor { 0 };
+	GLuint rboDownsamplePosition { 0 };
+	GLuint rboDepth { 0 };
 	GLFWwindow* window;
 	int no_triangles;
 

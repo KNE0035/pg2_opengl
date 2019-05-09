@@ -154,5 +154,11 @@
     <None Include="basic_shader.frag">
       <Filter>Source Files\opengl</Filter>
     </None>
+    <None Include="downsample_shader.frag">
+      <Filter>Source Files\opengl</Filter>
+    </None>
+    <None Include="downsample_shader.vert">
+      <Filter>Source Files\opengl</Filter>
+    </None>
   </ItemGroup>
 </Project>

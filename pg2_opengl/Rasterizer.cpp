@@ -62,19 +62,52 @@ void Rasterizer::initMaterials() {
 }
 
 int Rasterizer::initFrameBuffer() {
+	int msaa_samples = 0;
+	glGetIntegerv(GL_SAMPLES, &msaa_samples);
+
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	// position renderbuffer.
+	glGenRenderbuffers(1, &rboPosition);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboPosition);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, camera.width_ , camera.height_);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_samples, GL_RGBA32F, camera.width_, camera.height_);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboPosition);
+
 	// Color renderbuffer.
 	glGenRenderbuffers(1, &rboColor);
 	glBindRenderbuffer(GL_RENDERBUFFER, rboColor);
-	glRenderbufferStorage(GL_RENDERBUFFER, /*GL_RGBA8*/GL_RGBA32F, camera.width_ , camera.height_);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, camera.width_, camera.height_);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_samples, GL_SRGB8_ALPHA8, camera.width_, camera.height_);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_RENDERBUFFER, rboColor);
+	
 	// Depth renderbuffer
 	glGenRenderbuffers(1, &rboDepth);
 	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, camera.width_, camera.height_);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboColor);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_samples, GL_DEPTH_COMPONENT24, camera.width_, camera.height_);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return -1;
+
+	glGenFramebuffers(1, &fboDownsample);
+	glBindFramebuffer(GL_FRAMEBUFFER, fboDownsample);
+	// Color downsample renderbuffer.
+	glGenTextures(1, &rboDownsampleColor);
+	glBindTexture(GL_TEXTURE_2D, rboDownsampleColor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, camera.width_, camera.height_, 0, GL_RGB, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, rboDownsampleColor, 0);
+	// Position downsample renderbuffer.
+	glGenTextures(1, &rboDownsamplePosition);
+	glBindTexture(GL_TEXTURE_2D, rboDownsamplePosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, camera.width_, camera.height_, 0, GL_RGB, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, rboDownsamplePosition, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return -1;
+
+	return S_OK;
 }
 
 void Rasterizer::loadScene(const std::string file_name) {
@@ -237,12 +270,13 @@ int Rasterizer::realeaseDevice() {
 
 int Rasterizer::RenderFrame() {
 	glBindVertexArray(vao);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	while (!glfwWindowShouldClose(window))
 	{
+		glUseProgram(shader_program);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		Vector3 lightPoss = Vector3(50, 0, 120);
-		//glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state setting function
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // state using function
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		Matrix4x4 model;
 		model.set(0, 0, 1);
@@ -260,14 +294,21 @@ int Rasterizer::RenderFrame() {
 
 
 		glUniform3f(possLocation ,lightPoss.x, lightPoss.y, lightPoss.z);
-
-
-		//glDrawArrays( GL_TRIANGLES, 0, vertices / );
-		//glDrawArrays( GL_POINTS, 0, 3 );
 		glDrawArrays(GL_TRIANGLES, 0, no_triangles * 3);
-		//glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0); // optional - render from an index buffer
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo); // bind custom FBO for reading
+		glReadBuffer(GL_COLOR_ATTACHMENT0); // select it‘s first color buffer for reading
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboDownsample); // bind default FBO (0) for writing
+		glDrawBuffer(GL_BACK_LEFT); // select it‘s left back buffer for writing
+		glBlitFramebuffer(0, 0, camera.width_, camera.height_, 0, 0, camera.width_, camera.height_, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+
+		glUseProgram(shader_program_downsample);
+
+
 
 		glfwSwapBuffers(window);
+		glfwSwapInterval(1);
 		glfwPollEvents();
 	}
 
