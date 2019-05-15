@@ -3,6 +3,8 @@
 in vec3 unified_normal;
 in vec2 texcoord;
 in float normalLightDot;
+in vec3 lr;
+in vec3 directionVector;
 
 out vec4 FragColor;
 
@@ -13,6 +15,7 @@ struct Material
 	vec3 diffuse;
 	vec3 specular;
 	vec3 ambient;
+	int shininess;
 	sampler2D tex_diffuse;
 };
 
@@ -29,7 +32,9 @@ void main( void )
 	vec4 diffusePart =  vec4(materials[material_index].diffuse.rgb *
 		texture( materials[material_index].tex_diffuse, texcoord ).rgb, 1.0f ) * normalLightDot;
 
-	FragColor = ambientPart + diffusePart;
+	vec4 specularPart =  vec4(materials[material_index].specular.rgb * pow(clamp(dot(-directionVector, lr), 0.0f, 1.0f), materials[material_index].shininess), 1.0f);
+
+	FragColor = ambientPart + diffusePart + specularPart;
 	//FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 	//FragColor = vec4((unified_normal.x + 1) * 0.5, (unified_normal.y + 1) * 0.5, (unified_normal.z + 1) * 0.5, 1.0f );
 }

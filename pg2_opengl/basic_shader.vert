@@ -8,8 +8,11 @@ layout ( location = 4 ) in vec3 in_tangent;layout ( location = 5 ) in int in_ma
 uniform mat4 MVP;
 uniform mat4 MVN;
 uniform vec3 lightPossition;
+uniform vec3 viewFrom;
 
 out vec3 unified_normal;
+out vec3 directionVector;
+out vec3 lr;
 out vec2 texcoord;
 out float normalLightDot;
 flat out int material_index;
@@ -35,4 +38,10 @@ void main( void )
 	vec3 vectorToLight_ES = normalize((MVN * vec4(vectorToLight_MS.x, vectorToLight_MS.y, vectorToLight_MS.z, 0.0f)).xyz);
 
 	normalLightDot = dot(unified_normal, vectorToLight_ES.xyz);
+
+	lr = 2 * normalLightDot * unified_normal - vectorToLight_ES.xyz;
+	
+	vec3 direction_MS = normalize(in_position_ms.xyz - viewFrom.xyz);
+	
+	directionVector = normalize((MVN * vec4(direction_MS.x, direction_MS.y, direction_MS.z, 0.0f)).xyz);
 }

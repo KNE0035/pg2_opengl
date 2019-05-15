@@ -24,7 +24,7 @@ struct GLMaterial
 	Color3f specular;
 	GLbyte pad1[4];
 	Color3f ambient;
-	GLbyte pad2[4];
+	GLint shininess;
 	GLuint64 tex_diffuse_handle{ 0 }; // 1 * 8 B
 	GLbyte pad3[8];
 };
@@ -49,6 +49,8 @@ void Rasterizer::initMaterials() {
 		}		
 		gl_materials[m].specular = material->specular(); // white specular color
 		gl_materials[m].ambient = material->ambient(); // white ambient color
+		gl_materials[m].shininess = material->shininess;
+		
 		m++;
 	}
 	ssbo_materials = 0;
@@ -291,19 +293,21 @@ int Rasterizer::RenderFrame() {
 		SetMatrix4x4(shader_program, mvn.data(), "MVN");
 		
 		const GLint possLocation = glGetUniformLocation(shader_program, "lightPossition");
-
-
 		glUniform3f(possLocation ,lightPoss.x, lightPoss.y, lightPoss.z);
+
+		const GLint viewFrom = glGetUniformLocation(shader_program, "viewFrom");
+		glUniform3f(viewFrom, camera.view_from().x, camera.view_from().y, camera.view_from().z);
+
 		glDrawArrays(GL_TRIANGLES, 0, no_triangles * 3);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo); // bind custom FBO for reading
 		glReadBuffer(GL_COLOR_ATTACHMENT0); // select it‘s first color buffer for reading
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboDownsample); // bind default FBO (0) for writing
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // bind default FBO (0) for writing
 		glDrawBuffer(GL_BACK_LEFT); // select it‘s left back buffer for writing
 		glBlitFramebuffer(0, 0, camera.width_, camera.height_, 0, 0, camera.width_, camera.height_, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 
-		glUseProgram(shader_program_downsample);
+		//glUseProgram(shader_program_downsample);
 
 
 
